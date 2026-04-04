@@ -1,31 +1,9 @@
-import { Link, useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
+import { Link } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ProfileDropdown from "./ProfileDropdown";
 
 const AdminHeader = () => {
-  let navigate = useNavigate();
-
-  const user = JSON.parse(sessionStorage.getItem("active-admin"));
-  console.log(user);
-
-  const adminLogout = () => {
-    toast.success("logged out!!!", {
-      position: "top-center",
-      autoClose: 1000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
-    sessionStorage.removeItem("active-admin");
-    sessionStorage.removeItem("admin-jwtToken");
-    window.location.reload(true);
-    setTimeout(() => {
-      navigate("/home");
-    }, 2000);
-  };
-
   return (
     <ul className="navbar-nav ms-auto mb-2 mb-lg-0 me-3 align-items-lg-center">
       {/* Manage Dropdown */}
@@ -173,25 +151,8 @@ const AdminHeader = () => {
         </ul>
       </li>
 
-      {/* Logout Button */}
-      <li className="nav-item">
-        <Link
-          to=""
-          className="btn btn-outline-danger fw-semibold px-4 py-2"
-          aria-current="page"
-          onClick={adminLogout}
-          style={{
-            fontSize: "0.95rem",
-            borderRadius: "0.5rem",
-            transition: "all 0.3s ease",
-            borderWidth: "2px"
-          }}
-        >
-          <i className="fas fa-sign-out-alt me-2"></i>
-          Logout
-        </Link>
-        <ToastContainer />
-      </li>
+      <ProfileDropdown />
+      <ToastContainer />
 
       <style jsx>{`
         .nav-link:hover {
@@ -208,11 +169,6 @@ const AdminHeader = () => {
         
         .dropdown-menu {
           animation: slideDown 0.3s ease;
-        }
-        
-        .btn-outline-danger:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
         }
         
         @keyframes slideDown {

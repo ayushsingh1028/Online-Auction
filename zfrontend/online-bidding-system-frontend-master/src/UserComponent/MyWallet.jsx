@@ -9,98 +9,136 @@ const MyWallet = () => {
   let navigate = useNavigate();
   const user = JSON.parse(sessionStorage.getItem("active-customer"));
   const customer_jwtToken = sessionStorage.getItem("customer-jwtToken");
-  const [walletAmount, setWalletAmount] = useState(user.walletAmount);
+  const [walletAmount, setWalletAmount] = useState(0);
 
   const [walletRequest, setWalletRequest] = useState({
     id: user.id,
     walletAmount: "",
   });
 
-  const [fetchUserWallet, setFetchUserWallet] = useState({});
-
-  walletRequest.userId = user.id;
+  const [loading, setLoading] = useState(false);
 
   const handleInput = (e) => {
     setWalletRequest({ ...walletRequest, [e.target.name]: e.target.value });
   };
 
   useEffect(() => {
-    const getMyWallet = async () => {
-      const userResponse = await retrieveMyWallet();
-      if (userResponse) {
-        setFetchUserWallet(userResponse.users[0]);
-        setWalletAmount(userResponse.users[0].walletAmount);
-      }
-    };
-
-    getMyWallet();
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    fetchWalletBalance();
   }, []);
 
-  const retrieveMyWallet = async () => {
-    const response = await axios.get(
-      "http://localhost:9090/api/user/fetch/user-id?userId=" + user.id
-    );
-
-    return response.data;
+  const fetchWalletBalance = async () => {
+    try {
+      const response = await axios.get(
+        `http://localhost:9090/api/user/fetch/user-id?userId=${user.id}`,
+        {
+          headers: {
+            Authorization: `Bearer ${customer_jwtToken}`,
+          },
+        }
+      );
+      if (response.data.success) {
+        setWalletAmount(response.data.users[0].walletAmount);
+      }
+    } catch (error) {
+      console.error("Error fetching wallet balance:", error);
+    }
   };
 
-  const addMoneyInWallet = (e) => {
-    fetch("http://localhost:9090/api/user/update/wallet", {
-      method: "PUT",
-      headers: {
-        Accept: "application/json",
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(walletRequest),
-    })
-      .then((result) => {
-        result.json().then((res) => {
-          if (res.success) {
-            toast.success(res.responseMessage, {
-              position: "top-center",
-              autoClose: 1000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-            });
-
-            setTimeout(() => {
-              window.location.reload(true);
-            }, 1000);
-          } else if (!res.success) {
-            toast.error(res.responseMessage, {
-              position: "top-center",
-              autoClose: 1000,
-              hideProgressBar: false,
-              closeOnClick: true,
-              pauseOnHover: true,
-              draggable: true,
-              progress: undefined,
-            });
-            setTimeout(() => {
-              window.location.reload(true);
-            }, 1000);
-          }
-        });
-      })
-      .catch((error) => {
-        console.error(error);
-        toast.error("It seems server is down", {
-          position: "top-center",
-          autoClose: 1000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-        });
-        setTimeout(() => {
-          window.location.reload(true);
-        }, 1000);
-      });
+  const addMoneyInWallet = async (e) => {
     e.preventDefault();
+    const amount = walletRequest.walletAmount;
+    
+    if (!amount || isNaN(amount) || parseFloat(amount) <= 0) {
+      toast.error("Please enter a valid amount", { position: "top-right" });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Step 1: Create Order in Backend
+      const orderRes = await axios.post(
+        "http://localhost:9090/api/payment/create-order",
+        {
+          userId: user.id,
+          amount: amount,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${customer_jwtToken}`,
+          },
+        }
+      );
+
+      const { razorpayOrderId, amount: rzpAmount, currency, keyId } = orderRes.data;
+
+      // Step 2: Open Razorpay Checkout
+      const options = {
+        key: keyId,
+        amount: rzpAmount,
+        currency: currency,
+        name: "Online Bidding System",
+        description: "Add Money to Wallet",
+        order_id: razorpayOrderId,
+        handler: async (response) => {
+          try {
+            // Step 3: Verify Payment in Backend
+            const verifyRes = await axios.post(
+              "http://localhost:9090/api/payment/verify-payment",
+              {
+                userId: user.id,
+                amount: amount,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${customer_jwtToken}`,
+                },
+              }
+            );
+
+            if (verifyRes.data.success) {
+              toast.success("Wallet Updated Successfully!", {
+                position: "top-center",
+                autoClose: 2000,
+              });
+              setWalletRequest({ ...walletRequest, walletAmount: "" });
+              fetchWalletBalance();
+            } else {
+              toast.error(verifyRes.data.responseMessage);
+            }
+          } catch (err) {
+            console.error("Verification error:", err);
+            toast.error("Payment verification failed!");
+          }
+        },
+        prefill: {
+          name: `${user.firstName} ${user.lastName}`,
+          email: user.emailId,
+          contact: user.phoneNo,
+        },
+        theme: {
+          color: "#2c3e50",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", function (response) {
+        toast.error("Payment Failed: " + response.error.description);
+      });
+      rzp.open();
+    } catch (error) {
+      console.error("Order creation error:", error);
+      toast.error("Failed to initiate payment. Try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -296,6 +334,11 @@ const MyWallet = () => {
           transform: translateY(0);
         }
         
+        .btn-update:disabled {
+          opacity: 0.7;
+          cursor: not-allowed;
+        }
+
         .quick-amounts {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
@@ -394,8 +437,9 @@ const MyWallet = () => {
                   type="submit"
                   className="btn-update"
                   onClick={addMoneyInWallet}
+                  disabled={loading}
                 >
-                  Add to Wallet
+                  {loading ? "Processing..." : "Add to Wallet"}
                 </button>
               </form>
             </div>

@@ -38,6 +38,7 @@ public class User {
 	@JoinColumn(name = "address_id")
 	private Address address;
 
+	@JsonIgnore
 	@ManyToOne
 	@JoinColumn(name = "seller_id")
 	private User seller;   // for Seller Delivery Person

@@ -32,6 +32,63 @@ const UserRegister = () => {
     setUser({ ...user, [e.target.name]: e.target.value });
   };
 
+  useEffect(() => {
+    /* global google */
+    if (window.google) {
+      google.accounts.id.initialize({
+        client_id: "111776091583-n8rcj7t8pur8uruf23d8uq5e8v3j8imo.apps.googleusercontent.com",
+        callback: handleGoogleLogin,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("googleSignUpDiv"),
+        { theme: "outline", size: "large", width: "450" }
+      );
+    }
+  }, [user.role]);
+
+  const handleGoogleLogin = (response) => {
+    if (!user.role) {
+      toast.error("Role not detected!", { position: "top-center" });
+      return;
+    }
+
+    const payload = {
+      tokenId: response.credential,
+      role: user.role,
+    };
+
+    fetch("http://localhost:9090/api/user/google-login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success) {
+          if (res.jwtToken !== null) {
+            if (res.user.role === "Admin") {
+              sessionStorage.setItem("active-admin", JSON.stringify(res.user));
+              sessionStorage.setItem("admin-jwtToken", res.jwtToken);
+            } else if (res.user.role === "Customer") {
+              sessionStorage.setItem("active-customer", JSON.stringify(res.user));
+              sessionStorage.setItem("customer-jwtToken", res.jwtToken);
+            } else if (res.user.role === "Delivery") {
+              sessionStorage.setItem("active-delivery", JSON.stringify(res.user));
+              sessionStorage.setItem("delivery-jwtToken", res.jwtToken);
+            }
+            toast.success(res.responseMessage, { position: "top-center", autoClose: 1000 });
+            setTimeout(() => { window.location.href = "/home"; }, 1000);
+          }
+        } else {
+          toast.error(res.responseMessage, { position: "top-center" });
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Google Sign-Up failed", { position: "top-center" });
+      });
+  };
+
   const saveUser = (e) => {
     e.preventDefault();
 
@@ -256,6 +313,35 @@ const UserRegister = () => {
         .btn-submit:active {
           transform: translateY(0);
         }
+
+        .divider {
+          display: flex;
+          align-items: center;
+          text-align: center;
+          margin: 30px 0;
+          color: #95a5a6;
+        }
+
+        .divider::before,
+        .divider::after {
+          content: '';
+          flex: 1;
+          border-bottom: 1px solid #e0e0e0;
+        }
+
+        .divider:not(:empty)::before {
+          margin-right: .5em;
+        }
+
+        .divider:not(:empty)::after {
+          margin-left: .5em;
+        }
+
+        .google-btn-container {
+          display: flex;
+          justify-content: center;
+          margin-top: 10px;
+        }
         
         @media (max-width: 768px) {
           .form-row {
@@ -415,6 +501,12 @@ const UserRegister = () => {
             >
               Register
             </button>
+
+            <div className="divider">OR</div>
+
+            <div className="google-btn-container">
+               <div id="googleSignUpDiv"></div>
+            </div>
           </form>
         </div>
       </div>

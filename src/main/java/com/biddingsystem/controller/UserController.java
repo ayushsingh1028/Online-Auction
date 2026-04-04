@@ -15,9 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.biddingsystem.dto.CommonApiResponse;
 import com.biddingsystem.dto.RegisterUserRequestDto;
 import com.biddingsystem.dto.UserLoginRequest;
+import com.biddingsystem.dto.GoogleLoginRequest;
 import com.biddingsystem.dto.UserLoginResponse;
 import com.biddingsystem.dto.UserResponseDto;
 import com.biddingsystem.dto.UserStatusUpdateRequestDto;
+import com.biddingsystem.dto.UserUpdateRequestDto;
 import com.biddingsystem.entity.User;
 import com.biddingsystem.resource.UserResource;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -50,6 +52,12 @@ public class UserController {
 	@Operation(summary =  "Api to login any User")
 	public ResponseEntity<UserLoginResponse> login(@RequestBody UserLoginRequest userLoginRequest) {
 		return userResource.login(userLoginRequest);
+	}
+
+	@PostMapping("google-login")
+	@Operation(summary = "Api to login or register User via Google")
+	public ResponseEntity<UserLoginResponse> googleLogin(@RequestBody GoogleLoginRequest googleLoginRequest) {
+		return userResource.googleLogin(googleLoginRequest);
 	}
 	
 	@GetMapping("/fetch/role-wise")
@@ -92,6 +100,12 @@ public class UserController {
 	@Operation(summary =  "Api to update the user wallet")
 	public ResponseEntity<CommonApiResponse> updateUserWallet(@RequestBody User user) {
 		return userResource.updateUserWallet(user);
+	}
+
+	@PutMapping("update/profile")
+	@Operation(summary = "Api to update user profile and address")
+	public ResponseEntity<CommonApiResponse> updateUserProfile(@RequestBody UserUpdateRequestDto request) {
+		return userResource.updateUserProfile(request);
 	}
 
 }

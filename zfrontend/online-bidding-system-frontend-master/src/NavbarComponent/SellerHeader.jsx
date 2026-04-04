@@ -1,86 +1,98 @@
-import { Link, useNavigate } from "react-router-dom";
-import { ToastContainer, toast } from "react-toastify";
+import { Link } from "react-router-dom";
+import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import ProfileDropdown from "./ProfileDropdown";
 
 const SellerHeader = () => {
-  let navigate = useNavigate();
-
-  const user = JSON.parse(sessionStorage.getItem("active-seller"));
-  console.log(user);
-
-  const sellerLogout = () => {
-    toast.success("logged out!!!", {
-      position: "top-center",
-      autoClose: 1000,
-      hideProgressBar: false,
-      closeOnClick: true,
-      pauseOnHover: true,
-      draggable: true,
-      progress: undefined,
-    });
-    sessionStorage.removeItem("active-seller");
-    sessionStorage.removeItem("seller-jwtToken");
-    window.location.reload(true);
-    setTimeout(() => {
-      navigate("/home");
-    }, 2000); // Redirect after 3 seconds
-  };
   return (
-    <ul class="navbar-nav ms-auto mb-2 mb-lg-0 me-5">
-      <li class="nav-item">
+    <ul className="navbar-nav ms-auto mb-2 mb-lg-0 me-3 align-items-lg-center">
+      <li className="nav-item">
         <Link
           to="/seller/order/all"
-          class="nav-link active"
+          className="nav-link text-color fw-semibold px-3 py-2"
           aria-current="page"
+          style={{
+            fontSize: "0.95rem",
+            transition: "all 0.3s ease",
+            borderRadius: "0.5rem"
+          }}
         >
-          <b className="text-color">Seller Orders</b>
+          <i className="fas fa-shopping-cart me-2"></i>
+          Orders
         </Link>
       </li>
-      <li class="nav-item">
+      <li className="nav-item">
         <Link
           to="/seller/delivery/register"
-          class="nav-link active"
+          className="nav-link text-color fw-semibold px-3 py-2"
           aria-current="page"
+          style={{
+            fontSize: "0.95rem",
+            transition: "all 0.3s ease",
+            borderRadius: "0.5rem"
+          }}
         >
-          <b className="text-color">Register Delivery</b>
+          <i className="fas fa-user-plus me-2"></i>
+          Register Delivery
         </Link>
       </li>
-      <li class="nav-item">
+      <li className="nav-item">
         <Link
           to="/seller/delivery-person/all"
-          class="nav-link active"
+          className="nav-link text-color fw-semibold px-3 py-2"
           aria-current="page"
+          style={{
+            fontSize: "0.95rem",
+            transition: "all 0.3s ease",
+            borderRadius: "0.5rem"
+          }}
         >
-          <b className="text-color">View Delivery Persons</b>
+          <i className="fas fa-users me-2"></i>
+          Delivery Persons
         </Link>
       </li>
-      <li class="nav-item">
-        <Link to="/product/add" class="nav-link active" aria-current="page">
-          <b className="text-color">Add Product</b>
+      <li className="nav-item">
+        <Link 
+          to="/product/add" 
+          className="nav-link text-color fw-semibold px-3 py-2" 
+          aria-current="page"
+          style={{
+            fontSize: "0.95rem",
+            transition: "all 0.3s ease",
+            borderRadius: "0.5rem"
+          }}
+        >
+          <i className="fas fa-plus-circle me-2"></i>
+          Add Product
         </Link>
       </li>
 
-      <li class="nav-item">
+      <li className="nav-item">
         <Link
           to="/seller/product/all"
-          class="nav-link active"
+          className="nav-link text-color fw-semibold px-3 py-2"
           aria-current="page"
+          style={{
+            fontSize: "0.95rem",
+            transition: "all 0.3s ease",
+            borderRadius: "0.5rem"
+          }}
         >
-          <b className="text-color">View My Products</b>
+          <i className="fas fa-box me-2"></i>
+          My Products
         </Link>
       </li>
 
-      <li class="nav-item">
-        <Link
-          to=""
-          class="nav-link active"
-          aria-current="page"
-          onClick={sellerLogout}
-        >
-          <b className="text-color">Logout</b>
-        </Link>
-        <ToastContainer />
-      </li>
+      <ProfileDropdown />
+      <ToastContainer />
+      
+      <style jsx>{`
+        .nav-link:hover {
+          background-color: #f8f9fa;
+          color: #2c3e50 !important;
+          transform: translateY(-2px);
+        }
+      `}</style>
     </ul>
   );
 };

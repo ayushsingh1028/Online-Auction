@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ToastContainer, toast } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { useNavigate } from "react-router-dom";
+import { Modal } from "react-bootstrap";
 
 
 const UserLoginForm = () => {
@@ -14,9 +15,126 @@ const UserLoginForm = () => {
   });
 
   const [activeTab, setActiveTab] = useState("signin");
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const [registerRequest, setRegisterRequest] = useState({
+    firstName: "",
+    lastName: "",
+    emailId: "",
+    password: "",
+    role: "",
+  });
+
+  const handleRegisterInput = (e) => {
+    setRegisterRequest({ ...registerRequest, [e.target.name]: e.target.value });
+  };
 
   const handleUserInput = (e) => {
     setLoginRequest({ ...loginRequest, [e.target.name]: e.target.value });
+  };
+
+  useEffect(() => {
+    /* global google */
+    if (window.google) {
+      google.accounts.id.initialize({
+        client_id: "111776091583-n8rcj7t8pur8uruf23d8uq5e8v3j8imo.apps.googleusercontent.com",
+        callback: handleGoogleLogin,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("googleSignInDiv"),
+        { theme: "outline", size: "large", width: "450" } 
+      );
+      if (showRegisterModal) {
+         google.accounts.id.renderButton(
+          document.getElementById("googleSignUpDivModal"),
+          { theme: "outline", size: "large", width: "400" } 
+        );
+      }
+    }
+  }, [loginRequest.role, showRegisterModal, registerRequest.role]);
+
+  const handleGoogleLogin = (response) => {
+    if (!loginRequest.role) {
+      toast.error("Please select a role first!", {
+        position: "top-center",
+        autoClose: 2000,
+      });
+      return;
+    }
+
+    const payload = {
+      tokenId: response.credential,
+      role: loginRequest.role,
+    };
+
+    fetch("http://localhost:9090/api/user/google-login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    })
+      .then((res) => res.json())
+      .then((res) => {
+        if (res.success) {
+          if (res.jwtToken !== null) {
+            if (res.user.role === "Admin") {
+              sessionStorage.setItem("active-admin", JSON.stringify(res.user));
+              sessionStorage.setItem("admin-jwtToken", res.jwtToken);
+            } else if (res.user.role === "Customer") {
+              sessionStorage.setItem("active-customer", JSON.stringify(res.user));
+              sessionStorage.setItem("customer-jwtToken", res.jwtToken);
+            } else if (res.user.role === "Delivery") {
+              sessionStorage.setItem("active-delivery", JSON.stringify(res.user));
+              sessionStorage.setItem("delivery-jwtToken", res.jwtToken);
+            }
+            toast.success(res.responseMessage, {
+              position: "top-center",
+              autoClose: 1000,
+            });
+            setTimeout(() => { window.location.href = "/home"; }, 1000);
+          }
+        } else {
+          toast.error(res.responseMessage, { position: "top-center" });
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Google Login failed", { position: "top-center" });
+      });
+  };
+
+  const registerAction = (e) => {
+    e.preventDefault();
+    if (!registerRequest.role) {
+      toast.error("Please select a role", { position: "top-center" });
+      return;
+    }
+
+    fetch("http://localhost:9090/api/user/register", {
+      method: "POST",
+      headers: {
+        Accept: "application/json",
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(registerRequest),
+    })
+      .then((result) => {
+        result.json().then((res) => {
+          if (res.success) {
+            toast.success("Registered successfully! You can now login.", {
+              position: "top-center",
+              autoClose: 1000,
+            });
+            setShowRegisterModal(false);
+          } else {
+            toast.error(res.responseMessage, { position: "top-center" });
+          }
+        });
+      })
+      .catch((error) => {
+        console.error(error);
+        toast.error("Registration failed", { position: "top-center" });
+      });
   };
 
   const loginAction = (e) => {
@@ -282,6 +400,35 @@ const UserLoginForm = () => {
         .btn-submit:active {
           transform: translateY(0);
         }
+
+        .divider {
+          display: flex;
+          align-items: center;
+          text-align: center;
+          margin: 30px 0;
+          color: #95a5a6;
+        }
+
+        .divider::before,
+        .divider::after {
+          content: '';
+          flex: 1;
+          border-bottom: 1px solid #e0e0e0;
+        }
+
+        .divider:not(:empty)::before {
+          margin-right: .5em;
+        }
+
+        .divider:not(:empty)::after {
+          margin-left: .5em;
+        }
+
+        .google-btn-container {
+          display: flex;
+          justify-content: center;
+          margin-top: 10px;
+        }
         
         @media (max-width: 576px) {
           .brand-title {
@@ -357,9 +504,100 @@ const UserLoginForm = () => {
             >
               Login
             </button>
+
+            <div className="divider">OR</div>
+
+            <div className="google-btn-container">
+               <div id="googleSignInDiv"></div>
+            </div>
+
+            <div className="link-text" onClick={() => setShowRegisterModal(true)}>
+              Don't have an account? Register Here
+            </div>
           </form>
         </div>
       </div>
+
+      <Modal show={showRegisterModal} onHide={() => setShowRegisterModal(false)} centered size="lg">
+        <Modal.Header closeButton style={{ background: '#2c3e50', color: 'white' }}>
+          <Modal.Title>Create New Account</Modal.Title>
+        </Modal.Header>
+        <Modal.Body style={{ padding: '40px' }}>
+          <h4 className="section-title" style={{ textAlign: 'center' }}>Join BidOut Community</h4>
+          <form>
+            <div className="form-group">
+                <div className="select-wrapper">
+                  <select
+                    onChange={handleRegisterInput}
+                    className="form-control"
+                    name="role"
+                    value={registerRequest.role}
+                  >
+                    <option value="">Select Target Role</option>
+                    <option value="Customer">Customer</option>
+                    <option value="Delivery">Delivery Person</option>
+                  </select>
+                </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="form-group">
+                <input
+                  name="firstName"
+                  className="form-control"
+                  placeholder="First Name"
+                  onChange={handleRegisterInput}
+                  value={registerRequest.firstName}
+                />
+              </div>
+              <div className="form-group">
+                <input
+                  name="lastName"
+                  className="form-control"
+                  placeholder="Last Name"
+                  onChange={handleRegisterInput}
+                  value={registerRequest.lastName}
+                />
+              </div>
+            </div>
+
+            <div className="form-group">
+              <input
+                type="email"
+                name="emailId"
+                className="form-control"
+                placeholder="Email Address"
+                onChange={handleRegisterInput}
+                value={registerRequest.emailId}
+              />
+            </div>
+
+            <div className="form-group">
+              <input
+                type="password"
+                name="password"
+                className="form-control"
+                placeholder="Create Password"
+                onChange={handleRegisterInput}
+                value={registerRequest.password}
+              />
+            </div>
+
+            <button
+              className="btn-submit"
+              onClick={registerAction}
+            >
+              Register Now
+            </button>
+
+            <div className="divider">OR</div>
+
+            <div className="google-btn-container">
+               <div id="googleSignUpDivModal"></div>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
       
       <ToastContainer />
     </div>

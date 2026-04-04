@@ -156,7 +156,7 @@ const Product = () => {
         draggable: true,
         progress: undefined,
       });
-    } else if (product.seller.id === user.id) {
+    } else if (product?.seller?.id === user?.id) {
       toast.error("You can't Bid on your own Product !!!", {
         position: "top-center",
         autoClose: 1000,
@@ -183,11 +183,11 @@ const Product = () => {
   };
 
   const sellerProductPage = () => {
-    console.log(product.seller.firstName);
+    console.log(product?.seller?.firstName);
     navigate(
-      `/product/seller/${product.seller.id}/${product.seller.firstName}`,
+      `/product/seller/${product?.seller?.id}/${product?.seller?.firstName}`,
       {
-        state: product.seller,
+        state: product?.seller,
       }
     );
   };
@@ -419,12 +419,12 @@ const Product = () => {
                 <div>
                   <span className="text-muted">Name: </span>
                   <span className="seller-name-link" onClick={sellerProductPage}>
-                    {product.seller.firstName}
+                    {product?.seller?.firstName}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted">Contact: </span>
-                  <span className="info-value">{product.seller.emailId}</span>
+                  <span className="info-value">{product?.seller?.emailId}</span>
                 </div>
               </div>
             </div>

@@ -48,6 +48,49 @@ const AddProductForm = () => {
     setProduct({ ...product, [e.target.name]: e.target.value });
   };
 
+  const [suggestion, setSuggestion] = useState(null);
+  const [loadingSuggestion, setLoadingSuggestion] = useState(false);
+
+  const handleSuggestPrice = async (e) => {
+    e.preventDefault();
+    if (!product.name || !product.description || !product.categoryId) {
+      toast.warning("Please fill Name, Description and Category first!", {
+        position: "top-center",
+        autoClose: 3000
+      });
+      return;
+    }
+
+    setLoadingSuggestion(true);
+    setSuggestion(null);
+
+    // Find category name
+    const cat = categories.find(c => c.id == product.categoryId);
+    const categoryName = cat ? cat.name : "General";
+
+    try {
+      const response = await axios.post("http://localhost:9090/api/ai/predict-price", {
+        name: product.name,
+        description: product.description,
+        category: categoryName
+      });
+
+      if (response.data) {
+        setSuggestion(response.data);
+        // Optionally auto-fill if it's a single value, but for range we just show it
+      }
+    } catch (error) {
+      console.error("AI Prediction Error", error);
+      if (error.response && error.response.status === 429) {
+        toast.error("AI is busy (Quota Exceeded). Please wait 1 minute and try again.");
+      } else {
+        toast.error("Failed to get price suggestion");
+      }
+    } finally {
+      setLoadingSuggestion(false);
+    }
+  };
+
   const saveProduct = (e) => {
     e.preventDefault();
     if (seller === null) {
@@ -294,7 +337,7 @@ const AddProductForm = () => {
                 Fill in the details to list your product
               </p>
             </div>
-            
+
             <div className="card-body text-color p-4">
               <form className="row g-4">
                 {/* Basic Information Section */}
@@ -316,7 +359,7 @@ const AddProductForm = () => {
                           placeholder="Enter product name"
                         />
                       </div>
-                      
+
                       <div className="col-md-6">
                         <label htmlFor="categoryId" className="form-label form-label-premium">
                           Category
@@ -361,9 +404,29 @@ const AddProductForm = () => {
                   <div className="form-section">
                     <h5 className="heading-font text-color mb-3">Pricing & Stock</h5>
                     <div className="row g-3">
+
+
+                      {/* Suggestion Display */}
+                      {loadingSuggestion && <div className="text-info mt-1">🤖 AI is analyzing current market trends...</div>}
+                      {suggestion && (
+                        <div className="alert alert-info mt-2 p-2" style={{ fontSize: '0.9rem' }}>
+                          <strong>💡 AI Suggested Price:</strong> {suggestion.min_price} - {suggestion.max_price} {suggestion.currency}
+                          <br />
+                          <small>{suggestion.reasoning}</small>
+                          <div className="mt-1">
+                            <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => setProduct({ ...product, price: Math.round((suggestion.min_price + suggestion.max_price) / 2) })}>
+                              Apply Avg ({(suggestion.min_price + suggestion.max_price) / 2})
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                       <div className="col-md-4">
                         <label htmlFor="price" className="form-label form-label-premium">
                           Product Price (₹)
+                          <button className="btn btn-sm btn-link text-decoration-none" onClick={handleSuggestPrice} disabled={loadingSuggestion}>
+                            ✨ Suggest Price
+                          </button>
                         </label>
                         <input
                           type="number"
@@ -473,9 +536,9 @@ const AddProductForm = () => {
             </div>
           </div>
         </div>
-      </div>
+      </div >
       <ToastContainer />
-    </div>
+    </div >
   );
 };
 

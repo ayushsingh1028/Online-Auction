@@ -27,6 +27,8 @@ import ViewDeliveryOrders from "./OrderComponent/ViewDeliveryOrders";
 import MyBids from "./ProductOfferComponent/MyBids";
 import MyWallet from "./UserComponent/MyWallet";
 import ProductsPage from "./PageComponent/ProductsPage";
+import Chatbot from "./components/Chatbot";
+import UserProfile from "./UserComponent/UserProfile";
 
 function App() {
   return (
@@ -87,9 +89,11 @@ function App() {
         <Route path="/customer/bid/all" element={<MyBids />} />
         <Route path="/customer/wallet" element={<MyWallet />} />
         <Route path="/products" element={<ProductsPage />} />
+        <Route path="/customer/profile" element={<UserProfile />} />
 
 
       </Routes>
+      <Chatbot />
     </div>
   );
 }

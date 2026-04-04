@@ -39,7 +39,7 @@ public class SecurityConfig {
 
 		http.csrf(csrf -> csrf.disable()).cors(cors -> cors.disable())
 
-				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/user/login", "/api/user/register").permitAll()
+				.authorizeHttpRequests(auth -> auth.requestMatchers("/api/user/login", "/api/user/register", "/api/user/google-login").permitAll()
 
 						// this APIs are only accessible by ADMIN
 						.requestMatchers("/api/user/admin/register", "/api/user/delete/seller", "/api/order/fetch/all",
@@ -58,9 +58,10 @@ public class SecurityConfig {
 						.requestMatchers("/api/order/update/delivery-status", "/api/order/fetch/delivery-wise")
 						.hasAuthority(UserRole.ROLE_DELIVERY.value())
 
-						// this APIs are only accessible by SELLER
+						// this APIs are only accessible by CUSTOMER
 						.requestMatchers("/api/order/add", "/api/order/fetch/user-wise", "/api/cart/update",
-								"/api/cart/add", "/api/cart/fetch", "/api/cart/delete", "/api/product/review/add")
+								"/api/cart/add", "/api/cart/fetch", "/api/cart/delete", "/api/product/review/add",
+								"/api/payment/create-order", "/api/payment/verify-payment")
 						.hasAuthority(UserRole.ROLE_CUSTOMER.value())
 
 						// this APIs are only accessible by ADMIN & SELLER

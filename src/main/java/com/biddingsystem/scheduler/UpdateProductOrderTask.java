@@ -20,10 +20,12 @@ import com.biddingsystem.entity.Orders;
 import com.biddingsystem.entity.Product;
 import com.biddingsystem.entity.ProductOffer;
 import com.biddingsystem.entity.User;
+import com.biddingsystem.entity.WalletTransaction;
 import com.biddingsystem.service.OrderService;
 import com.biddingsystem.service.ProductOfferService;
 import com.biddingsystem.service.ProductService;
 import com.biddingsystem.service.UserService;
+import com.biddingsystem.service.WalletTransactionService;
 import com.biddingsystem.utility.Constants.DeliveryStatus;
 import com.biddingsystem.utility.Constants.DeliveryTime;
 import com.biddingsystem.utility.Constants.ProductOfferStatus;
@@ -47,6 +49,9 @@ public class UpdateProductOrderTask {
 	
 	@Autowired
 	private UserService userService;
+
+	@Autowired
+	private WalletTransactionService walletTransactionService;
 
 	@Scheduled(fixedRate = 60000) // 100,000 milliseconds = 5 minutes
 	public void updateProductOffers() {
@@ -134,13 +139,31 @@ public class UpdateProductOrderTask {
 			
 			User customer = biggestOffer.getUser();
 			customer.setWalletAmount(customer.getWalletAmount().subtract(biggestOffer.getAmount()));
-			
 			this.userService.updateUser(customer);
+
+			// Record Payment Transaction for Buyer
+			WalletTransaction buyerTransaction = new WalletTransaction();
+			buyerTransaction.setAmount(biggestOffer.getAmount());
+			buyerTransaction.setDateTime(String.valueOf(System.currentTimeMillis()));
+			buyerTransaction.setStatus("Success");
+			buyerTransaction.setType("Payment");
+			buyerTransaction.setUser(customer);
+			buyerTransaction.setRemarks("Bought Product: " + product.getName());
+			walletTransactionService.addTransaction(buyerTransaction);
 			
 			User seller = product.getSeller();
 			seller.setWalletAmount(seller.getWalletAmount().add(biggestOffer.getAmount()));
-			
 			this.userService.updateUser(seller);
+
+			// Record Earnings Transaction for Seller
+			WalletTransaction sellerTransaction = new WalletTransaction();
+			sellerTransaction.setAmount(biggestOffer.getAmount());
+			sellerTransaction.setDateTime(String.valueOf(System.currentTimeMillis()));
+			sellerTransaction.setStatus("Success");
+			sellerTransaction.setType("Earnings");
+			sellerTransaction.setUser(seller);
+			sellerTransaction.setRemarks("Sold Product: " + product.getName());
+			walletTransactionService.addTransaction(sellerTransaction);
 		
 			System.out.println("Order Updated");
 

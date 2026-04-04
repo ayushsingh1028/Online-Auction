@@ -387,15 +387,15 @@ const ViewSellerOrders = () => {
               <tbody>
                 {orders.map((order) => {
                   return (
-                    <tr key={order.orderId}>
+                    <tr key={order?.orderId}>
                       <td>
-                        <b className="text-color">{order.orderId}</b>
+                        <b className="text-color">{order?.orderId}</b>
                       </td>
                       <td>
                         <img
                           src={
                             "http://localhost:9090/api/product/" +
-                            order.product.image1
+                            order?.product?.image1
                           }
                           className="img-fluid product-img-premium"
                           alt="product_pic"
@@ -405,35 +405,35 @@ const ViewSellerOrders = () => {
                         />
                       </td>
                       <td>
-                        <b className="text-color">{order.product.name}</b>
+                        <b className="text-color">{order?.product?.name}</b>
                       </td>
                       <td>
-                        <b className="text-color">{order.product.category.name}</b>
+                        <b className="text-color">{order?.product?.category?.name}</b>
                       </td>
                       <td>
-                        <b className="text-color">{order.product.seller.firstName}</b>
+                        <b className="text-color">{order?.product?.seller?.firstName || "N/A"}</b>
                       </td>
                       <td>
-                        <b className="text-color">₹{order.product.price}</b>
+                        <b className="text-color">₹{order?.product?.price}</b>
                       </td>
                       <td>
-                        <b className="text-success">₹{order.productOffer.amount}</b>
+                        <b className="text-success">₹{order?.productOffer?.amount}</b>
                       </td>
                       <td>
-                        <b className="text-color">{order.quantity}</b>
+                        <b className="text-color">{order?.quantity}</b>
                       </td>
                       <td>
-                        <b className="text-color">{order.user.firstName}</b>
+                        <b className="text-color">{order?.user?.firstName || "Customer"}</b>
                       </td>
                       <td>
-                        <span className={`status-badge-premium ${getStatusColor(order.status)} text-white`}>
-                          {order.status}
+                        <span className={`status-badge-premium ${getStatusColor(order?.status)} text-white`}>
+                          {order?.status}
                         </span>
                       </td>
                       <td>
                         {(() => {
-                          if (order.deliveryPerson) {
-                            return <b className="text-color">{order.deliveryPerson.firstName}</b>;
+                          if (order?.deliveryPerson) {
+                            return <b className="text-color">{order?.deliveryPerson?.firstName}</b>;
                           } else {
                             return <b className="text-danger">Pending</b>;
                           }
@@ -441,8 +441,8 @@ const ViewSellerOrders = () => {
                       </td>
                       <td>
                         {(() => {
-                          if (order.deliveryPerson) {
-                            return <b className="text-color">{order.deliveryPerson.phoneNo}</b>;
+                          if (order?.deliveryPerson) {
+                            return <b className="text-color">{order?.deliveryPerson?.phoneNo}</b>;
                           } else {
                             return <b className="text-danger">Pending</b>;
                           }
@@ -450,10 +450,10 @@ const ViewSellerOrders = () => {
                       </td>
                       <td>
                         {(() => {
-                          if (order.deliveryDate) {
+                          if (order?.deliveryDate) {
                             return (
                               <b className="text-color">
-                                {order.deliveryDate + " " + order.deliveryTime}
+                                {order?.deliveryDate + " " + order?.deliveryTime}
                               </b>
                             );
                           } else {
@@ -463,14 +463,14 @@ const ViewSellerOrders = () => {
                       </td>
                       <td>
                         {(() => {
-                          if (order.deliveryPerson) {
+                          if (order?.deliveryPerson) {
                             return <b className="text-success">Delivery Assigned</b>;
                           } else {
                             return (
                               <button
                                 className="btn btn-sm btn-premium"
                                 variant="primary"
-                                onClick={() => assignDelivery(order.orderId)}
+                                onClick={() => assignDelivery(order?.orderId)}
                               >
                                 Assign Delivery
                               </button>

@@ -1,5 +1,7 @@
 package com.biddingsystem.resource;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,6 +27,7 @@ import com.biddingsystem.dto.UserLoginRequest;
 import com.biddingsystem.dto.UserLoginResponse;
 import com.biddingsystem.dto.UserResponseDto;
 import com.biddingsystem.dto.UserStatusUpdateRequestDto;
+import com.biddingsystem.dto.UserUpdateRequestDto;
 import com.biddingsystem.entity.Address;
 import com.biddingsystem.entity.Product;
 import com.biddingsystem.entity.User;
@@ -36,8 +39,13 @@ import com.biddingsystem.utility.Constants.ProductStatus;
 import com.biddingsystem.utility.Constants.UserRole;
 import com.biddingsystem.utility.Constants.UserStatus;
 import com.biddingsystem.utility.JwtUtils;
-
-import jakarta.transaction.Transactional;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier;
+import com.google.api.client.http.javanet.NetHttpTransport;
+import com.google.api.client.json.gson.GsonFactory;
+import com.biddingsystem.dto.GoogleLoginRequest;
+import java.util.Collections;
 
 @Component
 @Transactional
@@ -169,10 +177,12 @@ public class UserResource {
 
 		}
 
+		user.setPhoneNo(request.getPhoneNo() != null ? request.getPhoneNo() : "N/A");
+
 		Address address = new Address();
-		address.setCity(request.getCity());
+		address.setCity(request.getCity() != null ? request.getCity() : "N/A");
 		address.setPincode(request.getPincode());
-		address.setStreet(request.getStreet());
+		address.setStreet(request.getStreet() != null ? request.getStreet() : "N/A");
 
 		Address savedAddress = this.addressService.addAddress(address);
 
@@ -561,4 +571,115 @@ public class UserResource {
 		return new ResponseEntity<CommonApiResponse>(response, HttpStatus.OK);
 	}
 
+	@Transactional
+	public ResponseEntity<CommonApiResponse> updateUserProfile(UserUpdateRequestDto request) {
+		CommonApiResponse response = new CommonApiResponse();
+
+		try {
+			if (request == null || request.getUserId() == 0) {
+				response.setResponseMessage("Invalid Update Request: User ID missing");
+				response.setSuccess(false);
+				return new ResponseEntity<CommonApiResponse>(response, HttpStatus.BAD_REQUEST);
+			}
+
+			User user = this.userService.getUserById(request.getUserId());
+			if (user == null) {
+				response.setResponseMessage("User Not Found with ID: " + request.getUserId());
+				response.setSuccess(false);
+				return new ResponseEntity<CommonApiResponse>(response, HttpStatus.BAD_REQUEST);
+			}
+
+			if (request.getFirstName() != null) user.setFirstName(request.getFirstName());
+			if (request.getLastName() != null) user.setLastName(request.getLastName());
+			if (request.getPhoneNo() != null) user.setPhoneNo(request.getPhoneNo());
+
+			Address address = user.getAddress();
+			if (address == null) address = new Address();
+			
+			if (request.getStreet() != null) address.setStreet(request.getStreet());
+			if (request.getCity() != null) address.setCity(request.getCity());
+			if (request.getPincode() != null && request.getPincode() > 0) address.setPincode(request.getPincode());
+
+			Address savedAddress = this.addressService.addAddress(address);
+			user.setAddress(savedAddress);
+
+			User updatedUser = this.userService.updateUser(user);
+			if (updatedUser == null) {
+				response.setResponseMessage("Failed to update Profile in database");
+				response.setSuccess(false);
+				return new ResponseEntity<CommonApiResponse>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+			}
+
+			response.setResponseMessage("Profile Updated Successfully!");
+			response.setSuccess(true);
+			return new ResponseEntity<CommonApiResponse>(response, HttpStatus.OK);
+		} catch (Exception e) {
+			LOG.error("Exception occurred while updating user profile", e);
+			response.setResponseMessage("Error: " + e.getMessage());
+			response.setSuccess(false);
+			return new ResponseEntity<CommonApiResponse>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
+
+	public ResponseEntity<UserLoginResponse> googleLogin(GoogleLoginRequest loginRequest) {
+		LOG.info("Received request for Google Login");
+		UserLoginResponse response = new UserLoginResponse();
+
+		try {
+			GoogleIdTokenVerifier verifier = new GoogleIdTokenVerifier.Builder(new NetHttpTransport(), new GsonFactory())
+					.setAudience(Collections.singletonList("111776091583-n8rcj7t8pur8uruf23d8uq5e8v3j8imo.apps.googleusercontent.com"))
+					.build();
+
+			GoogleIdToken idToken = verifier.verify(loginRequest.getTokenId());
+			if (idToken == null) {
+				response.setResponseMessage("Invalid Google ID Token");
+				response.setSuccess(false);
+				return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+			}
+
+			Payload payload = idToken.getPayload();
+			String email = payload.getEmail();
+			String firstName = (String) payload.get("given_name");
+			String lastName = (String) payload.get("family_name");
+
+			User user = this.userService.getUserByEmailIdAndRoleAndStatus(email, loginRequest.getRole(), UserStatus.ACTIVE.value());
+
+			if (user == null) {
+				// Register new user automatically if not found
+				LOG.info("Google user not found, registering as: " + loginRequest.getRole());
+				user = new User();
+				user.setEmailId(email);
+				user.setFirstName(firstName);
+				user.setLastName(lastName);
+				user.setRole(loginRequest.getRole());
+				user.setStatus(UserStatus.ACTIVE.value());
+				user.setWalletAmount(BigDecimal.ZERO);
+				user.setPassword(passwordEncoder.encode("GOOGLE_OAUTH_LOGIN_" + email)); // Place-holder password
+				
+				Address address = new Address();
+				address.setCity("N/A");
+				address.setStreet("N/A");
+				address.setPincode(0);
+				Address savedAddress = this.addressService.addAddress(address);
+				user.setAddress(savedAddress);
+				
+				user = this.userService.addUser(user);
+			}
+
+			String jwtToken = jwtUtils.generateToken(email);
+			UserDto userDto = UserDto.toUserDtoEntity(user);
+
+			response.setUser(userDto);
+			response.setResponseMessage("Logged in successfully via Google");
+			response.setSuccess(true);
+			response.setJwtToken(jwtToken);
+			return new ResponseEntity<>(response, HttpStatus.OK);
+
+		} catch (Exception e) {
+			LOG.error("Error during Google login", e);
+			response.setResponseMessage("Google login failed: " + e.getMessage());
+			response.setSuccess(false);
+			return new ResponseEntity<>(response, HttpStatus.INTERNAL_SERVER_ERROR);
+		}
+	}
 }
